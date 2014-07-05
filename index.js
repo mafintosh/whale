@@ -186,7 +186,7 @@ var whale = function(url) {
               id: i.Id,
               parent: i.ParentId,
               created: new Date(i.Created * 1000),
-              name: decodeImage(tag).replace('@latest', ''),
+              name: encodeImage(tag).replace('@latest', ''),
               size: i.Size,
               virtualSize: i.VirtualSize
             })
