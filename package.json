@@ -1,5 +1,7 @@
 {
   "name": "docker-manager",
+  "version": "0.0.0",
+  "description": "thingy for docker that is pretty sweet",
   "bin": {
     "dm": "bin.js"
   },
