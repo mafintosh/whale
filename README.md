@@ -1,3 +1,17 @@
-# docker-manager
+# whale
 
-Thingy for docker that is pretty sweet
+whale makes docker easier to use
+
+```
+npm install -g whale
+```
+
+## Usage
+
+```
+$ whale help
+```
+
+## License
+
+MIT

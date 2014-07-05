@@ -1,9 +1,11 @@
 {
-  "name": "docker-manager",
+  "name": "whale",
   "version": "0.0.0",
-  "description": "thingy for docker that is pretty sweet",
+  "description": "whale makes docker easier to use",
+  "repository": "mafintosh/whale",
+  "license": "MIT",
   "bin": {
-    "dm": "bin.js"
+    "whale": "bin.js"
   },
   "dependencies": {
     "after-all": "^2.0.0",

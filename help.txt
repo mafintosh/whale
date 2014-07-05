@@ -1,4 +1,4 @@
-Usage: dm [command] [image_or_alias] [options]
+Usage: whale [command] [image_or_alias] [options]
 
 Available commands are:
   start        start a new container

@@ -15,7 +15,15 @@ var decodeImage = function(img) {
   return img.replace(/@/g, ':')
 }
 
-var manager = function(url) {
+var encodeContainer = function(c) {
+  return /^[a-zA-Z0-9_\-]+$/.test(c) ? c : 'whale-'+new Buffer(c).toString('hex')
+}
+
+var decodeContainer = function(c) {
+  return /^whale-/.test(c) ? new Buffer(c.slice(3), 'hex').toString() : c
+}
+
+var whale = function(url) {
   url = host(url)
   if (url.host) url.host = 'http://'+url.host
 
@@ -197,4 +205,4 @@ var manager = function(url) {
   return that
 }
 
-module.exports = manager
+module.exports = whale
