@@ -39,11 +39,23 @@ var whale = function(url) {
 
   var that = {}
 
+  that.restart = function(name, opts, cb) {
+    if (typeof opts === 'function') return that.restart(name, null, opts)
+    if (!opts) opts = {}
+    if (!cb) cb = noop
+
+    that.stop(name, opts, function(err) {
+      if (err) return cb(err)
+      that.start(name, opts, cb)
+    })
+  }
+
   that.start = function(name, opts, cb) {
     if (typeof opts === 'function') return that.start(name, null, opts)
     if (!opts) opts = {}
     if (!cb) cb = noop
 
+    name = encodeContainer(name)
     if (!opts.network) opts.network = 'host'
 
     var removeAndStart = function() {
@@ -58,7 +70,7 @@ var whale = function(url) {
     lookup(name, function(err, data) {
       if (err) return cb(err)
       if (data && !data.State.Running) return removeAndStart()
-      if (data) return cb(new Error('Container already exists'))
+      if (data) return cb(new Error('Container is already running'))
 
       var c = {
         name: name,
@@ -80,9 +92,11 @@ var whale = function(url) {
     if (!opts) opts = {}
     if (!cb) cb = noop
 
+    name = encodeContainer(name)
+
     lookup(name, function(err, data, c) {
       if (err) return cb(err)
-      if (!data) return cb(new Error('Container does not exist'))
+      if (!data) return cb(new Error('Container is not running'))
 
       c.stop({t:30}, function(err) {
         if (err) return cb(err)
@@ -97,6 +111,8 @@ var whale = function(url) {
     if (typeof opts === 'function') return that.log(name, null, opts)
     if (!opts) opts = {}
 
+    name = encodeContainer(name)
+
     var onstream = function(err, stream) {
       if (err) return cb(err)
       var r = raw()
@@ -108,7 +124,7 @@ var whale = function(url) {
 
     lookup(name, function(err, data, c) {
       if (err) return cb(err)
-      if (!data) return cb(new Error('Container does not exist'))
+      if (!data) return cb(new Error('Container is not running'))
 
       if (opts.all) c.logs(dopts, onstream)
       else c.attach(dopts, onstream)
@@ -142,11 +158,13 @@ var whale = function(url) {
   }
 
   that.build = function(image) {
+    image = decodeImage(image)
     return build({tag:image})
   }
 
   that.remove = function(image, cb) {
-    docker.getImage(decodeImage(image)).remove(function(err) {
+    image = decodeImage(image)
+    docker.getImage(image).remove(function(err) {
       cb(err)
     })
   }
@@ -168,7 +186,7 @@ var whale = function(url) {
               id: i.Id,
               parent: i.ParentId,
               created: new Date(i.Created * 1000),
-              name: tag.replace(':', '@').replace('@latest', ''),
+              name: decodeImage(tag).replace('@latest', ''),
               size: i.Size,
               virtualSize: i.VirtualSize
             })
@@ -192,7 +210,7 @@ var whale = function(url) {
             id: c.Id,
             created: new Date(c.Created * 1000),
             command: c.Command,
-            name: c.Names[0].slice(1),
+            name: decodeContainer(c.Names[0].slice(1)),
             image: encodeImage(c.Image),
             status: c.Status
           }

@@ -5,7 +5,7 @@ var relative = require('relative-date')
 var pretty = require('prettysize')
 var table = require('text-table')
 var tar = require('tar-fs')
-var dm = require('./')()
+var whale = require('./')()
 
 var help = function() {
   console.error(require('fs').readFileSync(require('path').join(__dirname, 'help.txt'), 'utf-8'))
@@ -23,14 +23,14 @@ var toName = function(c) {
 }
 
 var names = function(cb) {
-  dm.ps(function(err, list) {
+  whale.ps(function(err, list) {
     if (err) return cb(err)
     cb(null, list.map(toName))
   })
 }
 
 var images = function(cb) {
-  dm.images(function(err, list) {
+  whale.images(function(err, list) {
     if (err) return cb(err)
     cb(null, list.map(toName))
   })
@@ -38,19 +38,19 @@ var images = function(cb) {
 
 tab('clean')
   (function() {
-    dm.clean(onerror)
+    whale.clean(onerror)
   })
 
 tab('build')
   (images)
   (function(image) {
-    if (!image) return onerror('Usage: dm build [image]')
-    tar.pack('.').pipe(dm.build(image)).pipe(process.stdout)
+    if (!image) return onerror('Usage: whale build [image]')
+    tar.pack('.').pipe(whale.build(image)).pipe(process.stdout)
   })
 
 tab('ps')
   (function() {
-    dm.ps(function(err, list) {
+    whale.ps(function(err, list) {
       if (err) return onerror(err)
 
       list = list.map(function(c) {
@@ -71,7 +71,7 @@ tab('ps')
 
 tab('images')
   (function() {
-    dm.images(function(err, list) {
+    whale.images(function(err, list) {
       if (err) return onerror(err)
 
       list = list.map(function(i) {
@@ -92,33 +92,43 @@ tab('images')
 tab('remove')
   (images)
   (function(image) {
-    dm.remove(image, onerror)
+    if (!image) return onerror('Usage: whale remove [image]')
+    whale.remove(image, onerror)
   })
 
 tab('log')
   ('--all', '-a')
   (names)
   (function(name, opts) {
-    dm.log(name, opts, function(err, stdout, stderr) {
+    if (!name) return onerror('Usage: whale log [name]')
+    whale.log(name, opts, function(err, stdout, stderr) {
       if (err) return onerror(err)
       stdout.pipe(process.stdout)
       stderr.pipe(process.stderr)
     })
   })
 
+tab('restart')
+  (names)
+  (function(name) {
+    if (!name) return onerror('Usage: whale restart [name]')
+    whale.restart(name, onerror)
+  })
+
 tab('stop')
   (names)
   (function(name) {
-    dm.stop(name, onerror)
+    if (!name) return onerror('Usage: whale stop [name]')
+    whale.stop(name, onerror)
   })
 
 tab('start')
   (images)
   (images)
-  ('--no-log')
   ('--detach', '-d')
-  (function(image, alias, opts) {
-    if (!alias) alias = image
+  (function(image, name, opts) {
+    if (!image) return onerror('Usage: whale start [image] [name?]')
+    if (!name) name = image
 
     var argv = opts['--'] || []
     var env = [].concat(opts.env || []).reduce(function(result, e) {
@@ -131,17 +141,17 @@ tab('start')
     opts.image = image
     opts.env = env
 
-    dm.start(alias || image, opts, function(err) {
+    whale.start(name, opts, function(err) {
       if (err) return onerror(err)
       if (opts.detach) return
 
-      dm.log(alias, {all:true}, function(err, stdout, stderr) {
+      whale.log(name, {all:true}, function(err, stdout, stderr) {
         if (err) return onerror(err)
         stdout.pipe(process.stdout)
         stderr.pipe(process.stderr)
 
         var stop = function() {
-          dm.stop(alias, function() {
+          whale.stop(name, function() {
             process.exit(0)
           })
         }

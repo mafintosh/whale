@@ -1,4 +1,4 @@
-Usage: whale [command] [image_or_alias] [options]
+Usage: whale [command] [options]
 
 Available commands are:
   start        start a new container
@@ -10,3 +10,5 @@ Available commands are:
   remove       remove a image
   clean        garbage collect containers/images
   complation   setup tab completion
+
+Run whale [command] --help for more information
