@@ -1,0 +1,6 @@
+{
+  "name": "docker-manager",
+  "bin": {
+    "dm": "bin.js"
+  }
+}
