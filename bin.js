@@ -4,6 +4,7 @@ var tab = require('tabalot')
 var relative = require('relative-date')
 var pretty = require('prettysize')
 var table = require('text-table')
+var tree = require('pretty-tree')
 var tar = require('tar-fs')
 var whale = require('./')()
 
@@ -33,6 +34,26 @@ var images = function(cb) {
   whale.images(function(err, list) {
     if (err) return cb(err)
     cb(null, list.map(toName))
+  })
+}
+
+var attach = function(name, all, kill) {
+  whale.log(name, {all:all}, function(err, stdout, stderr) {
+    if (err) return onerror(err)
+
+    stdout.pipe(process.stdout)
+    stderr.pipe(process.stderr)
+
+    if (!kill) return
+
+    var stop = function() {
+      whale.stop(name, function() {
+        process.exit(0)
+      })
+    }
+
+    process.on('SIGTERM', stop)
+    process.on('SIGINT', stop)
   })
 }
 
@@ -101,18 +122,38 @@ tab('log')
   (names)
   (function(name, opts) {
     if (!name) return onerror('Usage: whale log [name]')
-    whale.log(name, opts, function(err, stdout, stderr) {
+    attach(name, opts.all, false)
+  })
+
+tab('info')
+  (names)
+  (function(name, opts) {
+    if (!name) return onerror('Usage: whale info [name]')
+
+    whale.info(name, function(err, info) {
       if (err) return onerror(err)
-      stdout.pipe(process.stdout)
-      stderr.pipe(process.stderr)
+
+      var name = info.name
+      delete info.name
+      info.created = relative(info.created)
+
+      console.log(tree.plain({
+        label: name,
+        leaf: info
+      }))
     })
   })
 
 tab('restart')
+  ('--attach', '-a')
   (names)
-  (function(name) {
+  (function(name, opts) {
     if (!name) return onerror('Usage: whale restart [name]')
-    whale.restart(name, onerror)
+
+    whale.restart(name, function(err) {
+      if (err) return onerror(err)
+      if (opts.attach) attach(name, true, true)
+    })
   })
 
 tab('stop')
@@ -123,42 +164,38 @@ tab('stop')
   })
 
 tab('start')
-  (images)
-  (images)
+  ('--volume', '-v', '@dir')
   ('--detach', '-d')
+  ('--env', '-e')
+  (images)
+  (images)
   (function(image, name, opts) {
     if (!image) return onerror('Usage: whale start [image] [name?]')
     if (!name) name = image
 
+    var log = opts.log || !opts.detach
     var argv = opts['--'] || []
+
     var env = [].concat(opts.env || []).reduce(function(result, e) {
       e = e.trim().match(/^([^=]+)=(.*)$/)
       if (e) result[e[1]] = e[2]
       return result
     }, {})
 
+    var volumes = [].concat(opts.volume || []).reduce(function(result, v) {
+      v = v.split(':')
+      result[v[0]] = v[1] || v[0]
+      return result
+    }, {})
+
     opts.argv = argv
     opts.image = image
     opts.env = env
+    opts.volumes = volumes
 
     whale.start(name, opts, function(err) {
       if (err) return onerror(err)
-      if (opts.detach) return
-
-      whale.log(name, {all:true}, function(err, stdout, stderr) {
-        if (err) return onerror(err)
-        stdout.pipe(process.stdout)
-        stderr.pipe(process.stderr)
-
-        var stop = function() {
-          whale.stop(name, function() {
-            process.exit(0)
-          })
-        }
-
-        process.on('SIGTERM', stop)
-        process.on('SIGINT', stop)
-      })
+      if (!opts.detach) attach(name, true, true)
     })
   })
 

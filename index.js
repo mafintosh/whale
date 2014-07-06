@@ -20,7 +20,7 @@ var encodeContainer = function(c) {
 }
 
 var decodeContainer = function(c) {
-  return /^whale-/.test(c) ? new Buffer(c.slice(3), 'hex').toString() : c
+  return /^whale-/.test(c) ? new Buffer(c.slice(6), 'hex').toString() : c
 }
 
 var whale = function(url) {
@@ -44,9 +44,40 @@ var whale = function(url) {
     if (!opts) opts = {}
     if (!cb) cb = noop
 
-    that.stop(name, opts, function(err) {
+    lookup(encodeContainer(name), function(_, data) {
+      if (data && data.Image) opts.image = opts.image || data.Image
+      that.stop(name, opts, function(err) {
+        if (err) return cb(err)
+        that.start(name, opts, cb)
+      })
+    })
+  }
+
+  that.info = function(name, opts, cb) {
+    if (typeof opts === 'function') return that.info(name, null, opts)
+    if (!opts) opts = {}
+
+    lookup(encodeContainer(name), function(err, data) {
       if (err) return cb(err)
-      that.start(name, opts, cb)
+      if (!data) return cb(new Error('Container is not running'))
+
+      var c = {
+        id: data.Id.slice(0, 12),
+        name: decodeContainer(data.Name.slice(1)),
+        image: data.Config.Image || data.Image,
+        command: (data.Config.Entrypoint || []).concat(data.Config.Cmd || []).join(' '),
+        created: new Date(data.Created),
+        network: data.HostConfig.NetworkMode,
+        volumes: data.Volumes || {},
+        env: data.Config.Env.reduce(function(env, next) {
+          next = next.match(/^([^=]+)=(.*)$/)
+          if (!next) return env
+          env[next[1]] = next[2]
+          return env
+        }, {})
+      }
+
+      cb(null, c)
     })
   }
 
@@ -72,15 +103,36 @@ var whale = function(url) {
       if (data && !data.State.Running) return removeAndStart()
       if (data) return cb(new Error('Container is already running'))
 
-      var c = {
-        name: name,
-        Image: decodeImage(opts.image || name),
-        Cmd: opts.argv || []
+      var sopts = {
+        NetworkMode: opts.network,
+        Binds: []
       }
 
-      docker.createContainer(c, function(err) {
+      var copts = {
+        name: name,
+        Image: decodeImage(opts.image || name),
+        Cmd: opts.argv || [],
+        Volumes: {},
+        Env: []
+      }
+
+      if (opts.env) {
+        Object.keys(opts.env).forEach(function(name) {
+          copts.Env.push(name+'='+opts.env[name])
+        })
+      }
+
+      if (opts.volumes) {
+        Object.keys(opts.volumes).forEach(function(to) {
+          var from = opts.volumes[to]
+          copts.Volumes[to] = {}
+          sopts.Binds.push(from+':'+to+':rw')
+        })
+      }
+
+      docker.createContainer(copts, function(err) {
         if (err) return cb(err)
-        docker.getContainer(name).start({NetworkMode:opts.network}, function(err) {
+        docker.getContainer(name).start(sopts, function(err) {
           cb(err)
         })
       })

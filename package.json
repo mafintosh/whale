@@ -13,6 +13,7 @@
     "docker-host": "^2.0.0",
     "docker-raw-stream": "^1.2.0",
     "dockerode": "^2.0.0",
+    "pretty-tree": "^0.2.0",
     "prettysize": "0.0.3",
     "relative-date": "^1.1.1",
     "tar-fs": "^0.3.3",
