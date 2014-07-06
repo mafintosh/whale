@@ -167,6 +167,7 @@ tab('start')
   ('--volume', '-v', '@dir')
   ('--detach', '-d')
   ('--env', '-e')
+  ('--port', '-p')
   ('--network', '-n', ['host', 'bridge', 'none'])
   (images)
   (images)
@@ -176,6 +177,12 @@ tab('start')
 
     var log = opts.log || !opts.detach
     var argv = opts['--'] || []
+
+    var ports = [].concat(opts.port || []).reduce(function(result, p) {
+      p = p.toString().split(':')
+      result[p[0]] = p[1] || p[0]
+      return result
+    }, {})
 
     var env = [].concat(opts.env || []).reduce(function(result, e) {
       e = e.trim().match(/^([^=]+)=(.*)$/)
@@ -193,6 +200,7 @@ tab('start')
     opts.image = image
     opts.env = env
     opts.volumes = volumes
+    opts.ports = ports
 
     whale.start(name, opts, function(err) {
       if (err) return onerror(err)

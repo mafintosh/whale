@@ -77,6 +77,13 @@ var whale = function(url) {
         }, {})
       }
 
+      if (data.HostConfig.NetworkMode === 'bridge') {
+        c.ports = Object.keys(data.NetworkSettings.Ports || {}).reduce(function(result, name) {
+          result[name.replace(/\/tcp$/, '')] = data.NetworkSettings.Ports[name][0].HostPort
+          return result
+        }, {})
+      }
+
       cb(null, c)
     })
   }
@@ -87,7 +94,6 @@ var whale = function(url) {
     if (!cb) cb = noop
 
     name = encodeContainer(name)
-    if (!opts.network) opts.network = 'host'
 
     var removeAndStart = function() {
       var c = docker.getContainer(name)
@@ -104,8 +110,9 @@ var whale = function(url) {
       if (data) return cb(new Error('Container is already running'))
 
       var sopts = {
-        NetworkMode: opts.network,
-        Binds: []
+        NetworkMode: opts.network || opts.ports && Object.keys(opts.ports).length ? 'bridge' : 'host',
+        Binds: [],
+        PortBindings: {}
       }
 
       var copts = {
@@ -113,7 +120,17 @@ var whale = function(url) {
         Image: decodeImage(opts.image || name),
         Cmd: opts.argv || [],
         Volumes: {},
-        Env: []
+        Env: [],
+        ExposedPorts: {}
+      }
+
+      if (opts.ports) {
+        Object.keys(opts.ports).forEach(function(from) {
+          var to = opts.ports[from]
+          if (!/\//.test(from)) from += '/tcp'
+          copts.ExposedPorts[from] = {}
+          sopts.PortBindings[from] = [{HostPort:to+''}]
+        })
       }
 
       if (opts.env) {
