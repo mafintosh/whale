@@ -125,12 +125,12 @@ tab('log')
     attach(name, opts.all, false)
   })
 
-tab('info')
+tab('inspect')
   (names)
   (function(name, opts) {
-    if (!name) return onerror('Usage: whale info [name]')
+    if (!name) return onerror('Usage: whale inspect [name]')
 
-    whale.info(name, function(err, info) {
+    whale.inspect(name, function(err, info) {
       if (err) return onerror(err)
 
       var name = info.name

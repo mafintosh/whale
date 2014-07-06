@@ -53,8 +53,8 @@ var whale = function(url) {
     })
   }
 
-  that.info = function(name, opts, cb) {
-    if (typeof opts === 'function') return that.info(name, null, opts)
+  that.inspect = function(name, opts, cb) {
+    if (typeof opts === 'function') return that.inspect(name, null, opts)
     if (!opts) opts = {}
 
     lookup(encodeContainer(name), function(err, data) {
