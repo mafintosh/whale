@@ -167,6 +167,7 @@ tab('start')
   ('--volume', '-v', '@dir')
   ('--detach', '-d')
   ('--env', '-e')
+  ('--network', '-n', ['host', 'bridge', 'none'])
   (images)
   (images)
   (function(image, name, opts) {
