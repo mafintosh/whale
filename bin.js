@@ -80,12 +80,11 @@ tab('ps')
           c.id.slice(0, 12),
           c.image,
           c.command,
-          relative(c.created),
-          c.status
+          relative(c.created)
         ]
       })
 
-      list.unshift(['NAME', 'ID', 'IMAGE', 'COMMAND', 'CREATED', 'STATUS'])
+      list.unshift(['NAME', 'ID', 'IMAGE', 'COMMAND', 'CREATED'])
       console.log(table(list, {hsep:'    '}))
     })
   })
