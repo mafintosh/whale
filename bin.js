@@ -57,6 +57,9 @@ var attach = function(name, all, kill) {
   })
 }
 
+tab('*')
+  ('--help', '-h', '-?')
+
 tab('clean')
   (function() {
     whale.clean(onerror)
