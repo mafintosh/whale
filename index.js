@@ -263,7 +263,7 @@ var whale = function(url) {
             created: new Date(c.Created * 1000),
             command: c.Command,
             name: decodeContainer(c.Names[0].slice(1)),
-            image: encodeImage(c.Image),
+            image: encodeImage(c.Image).replace(/@latest$/, ''),
             status: c.Status
           }
         })
