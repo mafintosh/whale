@@ -92,10 +92,11 @@ tab('push')
   })
 
 tab('build')
+  ('--no-cache')
   (images)
-  (function(image) {
+  (function(image, opts) {
     if (!image) return onerror('Usage: whale build [image]')
-    tar.pack('.').pipe(whale.build(image)).on('error', onerror).pipe(process.stdout)
+    tar.pack('.').pipe(whale.build(image, opts)).on('error', onerror).pipe(process.stdout)
   })
 
 tab('ps')
@@ -173,6 +174,7 @@ tab('inspect')
   })
 
 tab('stop')
+  ('--force')
   (names)
   (function(name) {
     if (!name) return onerror('Usage: whale stop [name]')
@@ -181,8 +183,9 @@ tab('stop')
 
 tab('start')
   ('--volume', '-v', '@dir')
-  ('--detach', '-d')
-  ('--dns')
+  ('--fork', '-f')
+  ('--force')
+  ('--dns', '-d')
   ('--env', '-e')
   ('--port', '-p')
   ('--network', '-n', ['host', 'bridge', 'none'])
@@ -221,7 +224,7 @@ tab('start')
 
     whale.start(name, opts, function(err) {
       if (err) return onerror(err)
-      if (!opts.detach) attach(name, true, true)
+      if (!opts.fork) attach(name, true, true)
     })
   })
 
