@@ -380,5 +380,11 @@ module.exports = function(remote, defaults) {
     })
   }
 
+  that.ping = function(cb) {
+    request.get('/_ping', {buffer:true}, function(err) {
+      cb(err)
+    })
+  }
+
   return that
 }
