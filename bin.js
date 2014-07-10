@@ -38,23 +38,23 @@ var images = function(cb) {
 }
 
 var attach = function(name, all, kill) {
-  whale.log(name, {all:all}, function(err, stdout, stderr) {
-    if (err) return onerror(err)
+  var log = whale.log(name, {all: all})
 
-    stdout.pipe(process.stdout)
-    stderr.pipe(process.stderr)
+  log.on('error', onerror)
+  log.stdout.pipe(process.stdout)
+  log.stderr.pipe(process.stderr)
 
-    if (!kill) return
+  if (!kill) return
 
-    var stop = function() {
-      whale.stop(name, function() {
-        process.exit(0)
-      })
-    }
+  var stop = function() {
+    whale.stop(name, function() {
+      process.exit(0)
+    })
+  }
 
-    process.on('SIGTERM', stop)
-    process.on('SIGINT', stop)
-  })
+  log.on('end', stop)
+  process.on('SIGTERM', stop)
+  process.on('SIGINT', stop)
 }
 
 tab('*')
@@ -65,11 +65,25 @@ tab('clean')
     whale.clean(onerror)
   })
 
+tab('pull')
+  (images)
+  (function(image, opts) {
+    if (!image) return onerror('Usage: whale pull [image]')
+    whale.pull(image, opts).on('error', onerror).pipe(process.stdout)
+  })
+
+tab('push')
+  (images)
+  (function(image, opts) {
+    if (!image) return onerror('Usage: whale push [image]')
+    whale.push(image, opts).on('error', onerror).pipe(process.stdout)
+  })
+
 tab('build')
   (images)
   (function(image) {
     if (!image) return onerror('Usage: whale build [image]')
-    tar.pack('.').pipe(whale.build(image)).pipe(process.stdout)
+    tar.pack('.').pipe(whale.build(image)).on('error', onerror).pipe(process.stdout)
   })
 
 tab('ps')
@@ -88,7 +102,7 @@ tab('ps')
       })
 
       list.unshift(['NAME', 'ID', 'IMAGE', 'COMMAND', 'CREATED'])
-      console.log(table(list, {hsep:'    '}))
+      console.log(table(list, {hsep: '    '}))
     })
   })
 
@@ -108,7 +122,7 @@ tab('images')
       })
 
       list.unshift(['NAME', 'ID', 'PARENT ID', 'CREATED', 'VIRTUAL SIZE'])
-      console.log(table(list, {hsep:'    '}))
+      console.log(table(list, {hsep: '    '}))
     })
   })
 
@@ -143,18 +157,6 @@ tab('inspect')
         label: name,
         leaf: info
       }))
-    })
-  })
-
-tab('restart')
-  ('--attach', '-a')
-  (names)
-  (function(name, opts) {
-    if (!name) return onerror('Usage: whale restart [name]')
-
-    whale.restart(name, function(err) {
-      if (err) return onerror(err)
-      if (opts.attach) attach(name, true, true)
     })
   })
 

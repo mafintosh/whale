@@ -1,9 +1,49 @@
-var events = require('events')
-var dockerode = require('dockerode')
-var host = require('docker-host')
+var docker = require('docker-remote-api')
 var raw = require('docker-raw-stream')
-var build = require('docker-build')
+var parse = require('through-json')
+var duplexify = require('duplexify')
+var through = require('through2')
 var after = require('after-all')
+var log = require('single-line-stream')
+var xtend = require('xtend')
+var pump = require('pump')
+
+var parseName = function(name) {
+  var parsed = name.match(/^(?:([^\/]+)\/)?([^@:]+)(?:[@:](.+))?$/).slice(1)
+  var result = {
+    name: parsed[1],
+    repository: parsed[0],
+    tag: parsed[2],
+  }
+  result.url = (result.repository ? result.repository+'/' : '') + result.name + (result.tag ? ':' + result.tag : '')
+  return result
+}
+
+var buildStream = function() {
+  return through.obj(function(data, enc, cb) {
+    if (data.error) return cb(new Error(data.error.trim()))
+    cb(null, data.stream)
+  })
+}
+
+var progressStream = function() {
+  var ids = []
+  var messages = []
+
+  return through.obj(function(data, enc, cb) {
+    if (data.error) return cb(new Error(data.error.trim()))
+    var i = data.id ? ids.lastIndexOf(data.id) : -1
+    if (i === -1) i = ids.push(data.id)-1
+    messages[i] = (data.id ? data.id + ' ' : '')+data.status+' '+(data.progress || '')
+    cb(null, messages.join('\n')+'\n')
+  })
+}
+
+var destroyer = function(dup) {
+  return function(err) {
+    if (err) dup.destroy(err)
+  }
+}
 
 var noop = function() {}
 
@@ -23,43 +63,141 @@ var decodeContainer = function(c) {
   return /^whale-/.test(c) ? new Buffer(c.slice(6), 'hex').toString() : c
 }
 
-var whale = function(url) {
-  url = host(url)
-  if (url.host) url.host = 'http://'+url.host
-
-  var docker = dockerode(url)
-
-  var lookup = function(name, cb) {
-    var c = docker.getContainer(name)
-    c.inspect(function(err, data) {
-      if (err) return cb(err.statusCode === 404 ? null : err, null, null)
-      cb(null, data, c)
-    })
-  }
-
+module.exports = function(remote, defaults) {
+  var request = docker(remote, defaults)
   var that = {}
 
-  that.restart = function(name, opts, cb) {
-    if (typeof opts === 'function') return that.restart(name, null, opts)
+  that.pull = function(image, opts) {
     if (!opts) opts = {}
-    if (!cb) cb = noop
+    image = parseName(image, opts)
 
-    lookup(encodeContainer(name), function(_, data) {
-      if (data && data.Image) opts.image = opts.image || data.Image
-      that.stop(name, opts, function(err) {
-        if (err) return cb(err)
-        that.start(name, opts, cb)
-      })
+    var dup = duplexify()
+    var post = request.post('/images/create', {
+      qs: {
+        repo: image.repository,
+        fromImage: image.name,
+        tag: image.tag,
+        registry: opts.registry
+      }
+    }, function(err, response) {
+      if (err) return dup.destroy(err)
+      dup.setReadable(pump(response, parse(), progressStream(), log(), destroyer(dup)))
+    })
+
+    dup.setWritable(null)
+    post.end()
+
+    return dup
+  }
+
+  that.push = function(image, opts) {
+    if (!opts) opts = {}
+    image = parseName(image)
+
+    var dup = duplexify()
+    var post = request.post('/images/'+(image.repository ? image.repository+'/' : '')+image.name+'/push', {
+      qs: {
+        registry: opts.registry,
+        tag: image.tag
+      },
+      headers: {
+        'X-Registry-Auth': opts.auth || {}
+      }
+    }, function(err, response) {
+      if (err) return dup.destroy(err)
+      dup.setReadable(pump(response, parse(), progressStream(), log(), destroyer(dup)))
+    })
+
+    dup.setWritable(null)
+    post.end()
+
+    return dup
+  }
+
+  that.build = function(image, opts) {
+    if (!opts) opts = {}
+    image = parseName(image)
+
+    var dup = duplexify()
+    var post = request.post('/build', {
+      qs: {
+        t: image.url,
+        nocache: opts.cache === false ? '1' : '0'
+      },
+      headers: {
+        'Content-Type': 'application/tar'
+      }
+    }, function(err, response) {
+      if (err) return dup.destroy(err)
+      dup.setReadable(pump(response, parse(), buildStream(), destroyer(dup)))
+    })
+
+    dup.setWritable(post)
+    return dup
+  }
+
+  that.remove = function(image, cb) {
+    if (!cb) cb = noop
+    image = parseName(image)
+
+    request.del('/images/'+image.url, {json: true}, function(err) {
+      cb(err)
     })
   }
 
-  that.inspect = function(name, opts, cb) {
-    if (typeof opts === 'function') return that.inspect(name, null, opts)
-    if (!opts) opts = {}
-
-    lookup(encodeContainer(name), function(err, data) {
+  that.images = function(cb) {
+    request.get('/images/json', {json: true}, function(err, list) {
       if (err) return cb(err)
-      if (!data) return cb(new Error('Container is not running'))
+
+      var result = []
+
+      list
+        .filter(function(i) {
+          return i.RepoTags.indexOf('<none>:<none>') === -1
+        })
+        .forEach(function(i) {
+          var tags = i.RepoTags || []
+          tags.forEach(function(tag) {
+            result.push({
+              id: i.Id,
+              parent: i.ParentId,
+              created: new Date(i.Created * 1000),
+              name: encodeImage(tag).replace('@latest', ''),
+              size: i.Size,
+              virtualSize: i.VirtualSize
+            })
+          })
+        })
+
+      cb(null, result)
+    })
+  }
+
+  that.ps = function(cb) {
+    request.get('/containers/json', {json: true}, function(err, list) {
+      if (err) return cb(err)
+
+      list = list
+        .filter(function(c) {
+          return c.Names && c.Names.length
+        })
+        .map(function(c) {
+          return {
+            id: c.Id,
+            created: new Date(c.Created * 1000),
+            command: c.Command,
+            name: decodeContainer(c.Names[0].slice(1)),
+            image: encodeImage(c.Image).replace(/@latest$/, '')
+          }
+        })
+
+      cb(null, list)
+    })
+  }
+
+  that.inspect = function(name, cb) {
+    request.get('/containers/'+encodeContainer(name)+'/json', {json: true}, function(err, data) {
+      if (err) return cb(err)
 
       var c = {
         id: data.Id.slice(0, 12),
@@ -88,6 +226,55 @@ var whale = function(url) {
     })
   }
 
+  that.clean = function(cb) {
+    if (!cb) cb = noop
+
+    request.get('/images/json', {json: true}, function(err, images) {
+      if (err) return cb(err)
+      request.get('/containers/json', {json: true, qs: {all: true}}, function(err, list) {
+        if (err) return cb(err)
+
+        var next = after(cb)
+        images.forEach(function(i) {
+          if (i.RepoTags[0] === '<none>:<none>') that.remove(i.Id, next())
+        })
+        list.forEach(function(c) {
+          var cb = next()
+          request.get('/containers/'+c.Id+'/json', {json: true}, function(err, data) {
+            if (err || !data) return cb(err)
+            if (data.State.Running) return cb()
+            request.del('/containers/'+c.Id, cb)
+          })
+        })
+      })
+    })
+  }
+
+  that.log = function(name, opts) {
+    if (!opts) opts = {}
+
+    var log = raw()
+    var post = request.post('/containers/'+encodeContainer(name)+'/attach', {
+      qs: {
+        stdout: 1,
+        stderr: 1,
+        stream: 1,
+        log: +!!opts.all
+      }
+    }, function(err, response) {
+      if (err) return log.destroy(err)
+      pump(response, log)
+    })
+
+    log.on('close', function() {
+      post.destroy()
+    })
+
+    post.end()
+
+    return log
+  }
+
   that.start = function(name, opts, cb) {
     if (typeof opts === 'function') return that.start(name, null, opts)
     if (!opts) opts = {}
@@ -95,19 +282,19 @@ var whale = function(url) {
 
     name = encodeContainer(name)
 
-    var removeAndStart = function() {
-      var c = docker.getContainer(name)
-      c.kill(function() {
-        c.remove(function() {
-          that.start(name, opts, cb)
+    var removeAndRetry = function() {
+      if (opts.retry === false) return cb(new Error('Could not be start container'))
+      request.post('/containers/'+name+'/kill', {body: null}, function() {
+        request.del('/containers/'+name, function() {
+          that.start(name, xtend(opts, {retry: false}), cb)
         })
       })
     }
 
-    lookup(name, function(err, data) {
-      if (err) return cb(err)
-      if (data && !data.State.Running) return removeAndStart()
-      if (data) return cb(new Error('Container is already running'))
+    request.get('/containers/'+name+'/json', {json: true}, function(err, data) {
+      if (err && err.statusCode !== 404) return cb(err)
+      if (data && !data.State.Running) return removeAndRetry()
+      if (data) return cb(opts.force ? null : new Error('Container is already running'))
 
       var sopts = {
         NetworkMode: opts.network || opts.ports && Object.keys(opts.ports).length ? 'bridge' : 'host',
@@ -116,7 +303,6 @@ var whale = function(url) {
       }
 
       var copts = {
-        name: name,
         Image: decodeImage(opts.image || name),
         Cmd: opts.argv || [],
         Volumes: {},
@@ -147,11 +333,9 @@ var whale = function(url) {
         })
       }
 
-      docker.createContainer(copts, function(err) {
+      request.post('/containers/create', {qs: {name: name}, json: copts}, function(err) {
         if (err) return cb(err)
-        docker.getContainer(name).start(sopts, function(err) {
-          cb(err)
-        })
+        request.post('/containers/'+name+'/start', {json: sopts}, cb)
       })
     })
   }
@@ -163,132 +347,15 @@ var whale = function(url) {
 
     name = encodeContainer(name)
 
-    lookup(name, function(err, data, c) {
+    request.get('/containers/'+name+'/json', {json: true}, function(err) {
+      if (err && err.statusCode === 404 && opts.force) return cb()
       if (err) return cb(err)
-      if (!data) return cb(new Error('Container is not running'))
-
-      c.stop({t:30}, function(err) {
+      request.post('/containers/'+name+'/stop', {body: null, qs: {t: opts.wait || 15}}, function(err) {
         if (err) return cb(err)
-        c.remove(function(err) {
-          cb(err)
-        })
+        request.del('/containers/'+name, cb)
       })
-    })
-  }
-
-  that.log = function(name, opts, cb) {
-    if (typeof opts === 'function') return that.log(name, null, opts)
-    if (!opts) opts = {}
-
-    name = encodeContainer(name)
-
-    var onstream = function(err, stream) {
-      if (err) return cb(err)
-      var r = raw()
-      stream.pipe(r)
-      cb(null, r.stdout, r.stderr)
-    }
-
-    var dopts = {stdout:true, stderr:true, stream:true, follow:true}
-
-    lookup(name, function(err, data, c) {
-      if (err) return cb(err)
-      if (!data) return cb(new Error('Container is not running'))
-
-      if (opts.all) c.logs(dopts, onstream)
-      else c.attach(dopts, onstream)
-    })
-  }
-
-  that.clean = function(cb) {
-    if (!cb) cb = noop
-
-    docker.listImages(function(err, images) {
-      if (err) return cb(err)
-      docker.listContainers({all:true}, function(err, list) {
-        if (err) return cb(err)
-
-        var next = after(cb)
-
-        images.forEach(function(i) {
-          if (i.RepoTags[0] === '<none>:<none>') docker.getImage(i.Id).remove(next())
-        })
-
-        list.forEach(function(c) {
-          var cb = next()
-          lookup(c.Id, function(err, data, c) {
-            if (err || !data) return cb(err)
-            if (data.State.Running) return cb()
-            c.remove(cb)
-          })
-        })
-      })
-    })
-  }
-
-  that.build = function(image) {
-    image = decodeImage(image)
-    return build({tag:image})
-  }
-
-  that.remove = function(image, cb) {
-    image = decodeImage(image)
-    docker.getImage(image).remove(function(err) {
-      cb(err)
-    })
-  }
-
-  that.images = function(cb) {
-    docker.listImages(function(err, list) {
-      if (err) return cb(err)
-
-      var result = []
-
-      list = list
-        .filter(function(i) {
-          return i.RepoTags.indexOf('<none>:<none>') === -1
-        })
-        .forEach(function(i) {
-          var tags = i.RepoTags || []
-          tags.forEach(function(tag) {
-            result.push({
-              id: i.Id,
-              parent: i.ParentId,
-              created: new Date(i.Created * 1000),
-              name: encodeImage(tag).replace('@latest', ''),
-              size: i.Size,
-              virtualSize: i.VirtualSize
-            })
-          })
-        })
-
-      cb(null, result)
-    })
-  }
-
-  that.ps = function(cb) {
-    docker.listContainers(function(err, list) {
-      if (err) return cb(err)
-
-      list = list
-        .filter(function(c) {
-          return c.Names && c.Names.length
-        })
-        .map(function(c) {
-          return {
-            id: c.Id,
-            created: new Date(c.Created * 1000),
-            command: c.Command,
-            name: decodeContainer(c.Names[0].slice(1)),
-            image: encodeImage(c.Image).replace(/@latest$/, '')
-          }
-        })
-
-      cb(null, list)
     })
   }
 
   return that
 }
-
-module.exports = whale
