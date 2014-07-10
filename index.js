@@ -64,8 +64,18 @@ var decodeContainer = function(c) {
 }
 
 module.exports = function(remote, defaults) {
+  if (typeof remote === 'object' && arguments.length === 1) return module.exports(null, remote)
+
   var request = docker(remote, defaults)
   var that = {}
+
+  var toAuth = function(opts) {
+    return {
+      email: opts.email || defaults.email,
+      username: opts.username || defaults.username,
+      password: opts.password || defaults.password
+    }
+  }
 
   that.pull = function(image, opts) {
     if (!opts) opts = {}
@@ -78,6 +88,9 @@ module.exports = function(remote, defaults) {
         fromImage: image.name,
         tag: image.tag,
         registry: opts.registry
+      },
+      headers: {
+        'X-Registry-Auth': toAuth(opts)
       }
     }, function(err, response) {
       if (err) return dup.destroy(err)
@@ -101,7 +114,7 @@ module.exports = function(remote, defaults) {
         tag: image.tag
       },
       headers: {
-        'X-Registry-Auth': opts.auth || {}
+        'X-Registry-Auth': toAuth(opts)
       }
     }, function(err, response) {
       if (err) return dup.destroy(err)
@@ -213,6 +226,7 @@ module.exports = function(remote, defaults) {
         command: (data.Config.Entrypoint || []).concat(data.Config.Cmd || []).join(' '),
         created: new Date(data.Created),
         network: data.HostConfig.NetworkMode,
+        dns: data.HostConfig.Dns || [],
         volumes: data.Volumes || {},
         env: data.Config.Env.reduce(function(env, next) {
           next = next.match(/^([^=]+)=(.*)$/)
@@ -316,6 +330,8 @@ module.exports = function(remote, defaults) {
         Env: [],
         ExposedPorts: {}
       }
+
+      if (opts.dns) sopts.Dns = [].concat(opts.dns)
 
       if (opts.ports) {
         Object.keys(opts.ports).forEach(function(from) {

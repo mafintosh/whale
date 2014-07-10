@@ -6,10 +6,22 @@ var pretty = require('prettysize')
 var table = require('text-table')
 var tree = require('pretty-tree')
 var tar = require('tar-fs')
-var whale = require('./')()
+var fs = require('fs')
+var path = require('path')
+
+var CONF = path.join(process.env.HOME || process.env.USERPROFILE, '.dockercfg')
+var AUTH = fs.existsSync(CONF) && JSON.parse(fs.readFileSync(CONF))['https://index.docker.io/v1/']
+
+if (AUTH) {
+  var parts = new Buffer(AUTH.auth, 'base64').toString().split(':')
+  AUTH.username = parts[0]
+  AUTH.password = parts[1]
+}
+
+var whale = require('./')(AUTH)
 
 var help = function() {
-  console.error(require('fs').readFileSync(require('path').join(__dirname, 'help.txt'), 'utf-8'))
+  console.error(fs.readFileSync(path.join(__dirname, 'help.txt'), 'utf-8'))
   process.exit(1)
 }
 
@@ -170,6 +182,7 @@ tab('stop')
 tab('start')
   ('--volume', '-v', '@dir')
   ('--detach', '-d')
+  ('--dns')
   ('--env', '-e')
   ('--port', '-p')
   ('--network', '-n', ['host', 'bridge', 'none'])
