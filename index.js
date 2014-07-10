@@ -169,6 +169,10 @@ module.exports = function(remote, defaults) {
           })
         })
 
+      result.sort(function(a, b) {
+        return a.name.localeCompare(b.name)
+      })
+
       cb(null, result)
     })
   }
@@ -189,6 +193,9 @@ module.exports = function(remote, defaults) {
             name: decodeContainer(c.Names[0].slice(1)),
             image: encodeImage(c.Image).replace(/@latest$/, '')
           }
+        })
+        .sort(function(a, b) {
+          return a.name.localeCompare(b.name)
         })
 
       cb(null, list)
