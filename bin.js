@@ -5,6 +5,7 @@ var relative = require('relative-date')
 var pretty = require('prettysize')
 var table = require('text-table')
 var tree = require('pretty-tree')
+var dateable = require('dateable')
 var tar = require('tar-fs')
 var fs = require('fs')
 var path = require('path')
@@ -116,6 +117,13 @@ tab('ps')
 
       list.unshift(['NAME', 'ID', 'IMAGE', 'COMMAND', 'CREATED'])
       console.log(table(list, {hsep: '    '}))
+    })
+  })
+
+tab('events')
+  (function() {
+    whale.events().on('data', function(data) {
+      console.log(dateable(data.time, 'YYYY-MM-DD hh:mm:ss')+' - '+(data.name || data.id)+' (from '+data.image+') '+': '+data.status)
     })
   })
 

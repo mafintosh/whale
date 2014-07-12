@@ -39,10 +39,27 @@ var progressStream = function() {
   })
 }
 
+var combine = function(first) {
+  var streams = Array.prototype.slice.call(this)
+  var dup = duplexify(streams[0], streams[streams.length-1])
+
+  pump(streams, function(err) {
+    dup.destroy(err)
+  })
+
+  return dup
+}
+
 var destroyer = function(dup) {
   return function(err) {
     if (err) dup.destroy(err)
   }
+}
+
+var link = function(a, b) {
+  a.on('close', function() {
+    b.destroy()
+  })
 }
 
 var noop = function() {}
@@ -95,6 +112,7 @@ module.exports = function(remote, defaults) {
     }, function(err, response) {
       if (err) return dup.destroy(err)
       dup.setReadable(pump(response, parse(), progressStream(), log(), destroyer(dup)))
+      link(dup, response)
     })
 
     dup.setWritable(null)
@@ -119,9 +137,10 @@ module.exports = function(remote, defaults) {
     }, function(err, response) {
       if (err) return dup.destroy(err)
       dup.setReadable(pump(response, parse(), progressStream(), log(), destroyer(dup)))
+      link(dup, response)
     })
 
-    dup.setWritable(null)
+    dup.setWritable(post)
     post.end()
 
     return dup
@@ -143,6 +162,7 @@ module.exports = function(remote, defaults) {
     }, function(err, response) {
       if (err) return dup.destroy(err)
       dup.setReadable(pump(response, parse(), buildStream(), destroyer(dup)))
+      link(dup, response)
     })
 
     dup.setWritable(post)
@@ -271,11 +291,51 @@ module.exports = function(remote, defaults) {
     })
   }
 
+  that.events = function(opts) {
+    if (!opts) opts = {}
+
+    var events = duplexify.obj()
+    var names = {}
+
+    var lookup = function(id, cb) {
+      if (names[id]) return cb(names[id])
+      that.inspect(id, function(err, data) {
+        if (err) return cb(null)
+        cb(names[id] = data.name)
+      })
+    }
+
+    var map = through.obj(function(data, enc, cb) {
+      var onname = function(name) {
+        if (data.status === 'destroy') delete names[data.id]
+        cb(null, {
+          status: data.status,
+          id: data.id.slice(0, 12),
+          name: name,
+          image: encodeImage(data.from).replace('@latest', ''),
+          time: new Date(data.time * 1000)
+        })
+      }
+
+      if (opts.name) lookup(data.id, onname)
+      else onname(null)
+    })
+
+    request.get('/events', {agent: false}, function(err, response) {
+      if (err) return events.destroy(err)
+      events.setReadable(pump(response, parse(), map))
+      link(events, response)
+    })
+    events.setWritable(null)
+    return events
+  }
+
   that.log = function(name, opts) {
     if (!opts) opts = {}
 
     var log = raw()
     var post = request.post('/containers/'+encodeContainer(name)+'/attach', {
+      agent: false,
       qs: {
         stdout: 1,
         stderr: 1,

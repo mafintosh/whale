@@ -9,8 +9,9 @@
   },
   "dependencies": {
     "after-all": "^2.0.0",
+    "dateable": "^1.0.1",
     "docker-raw-stream": "^1.2.0",
-    "docker-remote-api": "^2.1.0",
+    "docker-remote-api": "^2.1.1",
     "duplexify": "^1.1.0",
     "pretty-tree": "^0.2.0",
     "prettysize": "0.0.3",
