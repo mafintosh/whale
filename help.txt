@@ -4,6 +4,7 @@ Available commands are:
   start        start a new container
   stop         stop a container
   restart      restart a container
+  events       print the event stream
   inspect      print info about a single container
   log          attach to container live logs
   images       list available images
