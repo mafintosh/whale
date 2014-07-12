@@ -17,6 +17,7 @@
     "pump": "^0.3.2",
     "relative-date": "^1.1.1",
     "single-line-stream": "^1.0.0",
+    "tabalot": "^0.6.0",
     "tar-fs": "^0.3.3",
     "text-table": "^0.2.0",
     "through-json": "^1.0.1",
