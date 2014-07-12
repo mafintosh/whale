@@ -1,6 +1,6 @@
 {
   "name": "whale",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "whale makes docker easier to use",
   "repository": "mafintosh/whale",
   "license": "MIT",
