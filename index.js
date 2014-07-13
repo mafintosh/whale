@@ -313,11 +313,19 @@ module.exports = function(remote, defaults) {
       }
     }, function(err, response) {
       if (err) return log.destroy(err)
-      pump(response, log)
+      response.pipe(log)
     })
 
     log.on('close', function() {
       post.destroy()
+    })
+
+    post.on('close', function() {
+      log.destroy()
+    })
+
+    post.on('error', function(err) {
+      log.destroy(err)
     })
 
     post.end()
