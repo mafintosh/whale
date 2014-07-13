@@ -173,6 +173,7 @@ tab('inspect')
       var name = info.name
       delete info.name
       info.created = relative(info.created)
+      info.id = info.id.slice(0, 12)
 
       console.log(tree.plain({
         label: name,

@@ -210,7 +210,7 @@ module.exports = function(remote, defaults) {
       if (err) return cb(err)
 
       var c = {
-        id: data.Id.slice(0, 12),
+        id: data.Id,
         name: decodeContainer(data.Name.slice(1)),
         image: data.Config.Image || data.Image,
         command: (data.Config.Entrypoint || []).concat(data.Config.Cmd || []).join(' '),
