@@ -2,11 +2,11 @@ var docker = require('docker-remote-api')
 var raw = require('docker-raw-stream')
 var parse = require('through-json')
 var duplexify = require('duplexify')
+var pumpify = require('pumpify')
 var through = require('through2')
 var after = require('after-all')
 var log = require('single-line-stream')
 var xtend = require('xtend')
-var pump = require('pump')
 
 var parseName = function(name) {
   var parsed = name.match(/^(?:([^\/]+)\/)?([^@:]+)(?:[@:](.+))?$/).slice(1)
@@ -36,29 +36,6 @@ var progressStream = function() {
     if (i === -1) i = ids.push(data.id)-1
     messages[i] = (data.id ? data.id + ' ' : '')+data.status+' '+(data.progress || '')
     cb(null, messages.join('\n')+'\n')
-  })
-}
-
-var combine = function(first) {
-  var streams = Array.prototype.slice.call(this)
-  var dup = duplexify(streams[0], streams[streams.length-1])
-
-  pump(streams, function(err) {
-    dup.destroy(err)
-  })
-
-  return dup
-}
-
-var destroyer = function(dup) {
-  return function(err) {
-    if (err) dup.destroy(err)
-  }
-}
-
-var link = function(a, b) {
-  a.on('close', function() {
-    b.destroy()
   })
 }
 
@@ -98,7 +75,7 @@ module.exports = function(remote, defaults) {
     if (!opts) opts = {}
     image = parseName(image, opts)
 
-    var dup = duplexify()
+    var pull = pumpify()
     var post = request.post('/images/create', {
       qs: {
         repo: image.repository,
@@ -110,22 +87,19 @@ module.exports = function(remote, defaults) {
         'X-Registry-Auth': toAuth(opts)
       }
     }, function(err, response) {
-      if (err) return dup.destroy(err)
-      dup.setReadable(pump(response, parse(), progressStream(), log(), destroyer(dup)))
-      link(dup, response)
+      if (err) return pull.destroy(err)
+      pull.setPipeline(response, parse(), progressStream(), log())
     })
 
-    dup.setWritable(null)
     post.end()
-
-    return dup
+    return pull
   }
 
   that.push = function(image, opts) {
     if (!opts) opts = {}
     image = parseName(image)
 
-    var dup = duplexify()
+    var push = pumpify()
     var post = request.post('/images/'+(image.repository ? image.repository+'/' : '')+image.name+'/push', {
       qs: {
         registry: opts.registry,
@@ -135,15 +109,12 @@ module.exports = function(remote, defaults) {
         'X-Registry-Auth': toAuth(opts)
       }
     }, function(err, response) {
-      if (err) return dup.destroy(err)
-      dup.setReadable(pump(response, parse(), progressStream(), log(), destroyer(dup)))
-      link(dup, response)
+      if (err) return push.destroy(err)
+      push.setPipeline(response, parse(), progressStream(), log())
     })
 
-    dup.setWritable(post)
     post.end()
-
-    return dup
+    return push
   }
 
   that.build = function(image, opts) {
@@ -161,8 +132,7 @@ module.exports = function(remote, defaults) {
       }
     }, function(err, response) {
       if (err) return dup.destroy(err)
-      dup.setReadable(pump(response, parse(), buildStream(), destroyer(dup)))
-      link(dup, response)
+      dup.setReadable(pumpify(response, parse(), buildStream()))
     })
 
     dup.setWritable(post)
@@ -323,10 +293,9 @@ module.exports = function(remote, defaults) {
 
     request.get('/events', {agent: false}, function(err, response) {
       if (err) return events.destroy(err)
-      events.setReadable(pump(response, parse(), map))
-      link(events, response)
+      events.setPipeline(response, parse(), map)
     })
-    events.setWritable(null)
+
     return events
   }
 
@@ -352,7 +321,6 @@ module.exports = function(remote, defaults) {
     })
 
     post.end()
-
     return log
   }
 
