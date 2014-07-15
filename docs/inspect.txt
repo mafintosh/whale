@@ -1,0 +1,3 @@
+Usage: whale inspect name
+
+Inspects and prints information about a running container

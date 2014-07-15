@@ -1,0 +1,29 @@
+Usage: whale start image [name?] [options?]
+
+Start a new container from an image, attach to it and pipe the log output
+to the terminal.
+
+Whale requires all containers to be named. If no alias is provided the name of
+the image will be used.
+
+Available options are
+
+  -n, --network     Specify the network mode. Defaults to host which means
+                    the container shares the host network
+  -e, --env         Set a env var. Format is NAME=VALUE.
+  -p, --port        Expose a port when using brigde network.
+                    Format is container-port:host-port.
+  -d, --dns         Set the container dns server
+  -f, --fork        Detach from the container
+  -v, --volume      Mount a host folder as a volume in the container.
+                    Format is container-folder:host-folder
+
+Use --fork to not attach to the container and run it in the background. Use
+whale stop [name] to stop it again
+
+If you want to set parameters to the image entry point add them after --
+
+  whale start my-image --env FOO=value -- --some-flag-to-the-entrypoint
+
+Options like --env,--port etc can be used multiple times to set multiple env
+vars etc.

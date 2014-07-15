@@ -1,0 +1,7 @@
+Usage: whale push [image]
+
+Push a image to a registry. The push progress will be forwarded to the terminal
+To push a specific tag use the @ syntax
+
+  whale push my-image            # pushes latest
+  whale push my-image@0.10.0     # pushed the 0.10.0 tag

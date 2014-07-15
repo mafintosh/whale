@@ -21,9 +21,9 @@ if (AUTH) {
 
 var whale = require('./')(AUTH)
 
-var help = function() {
-  console.error(fs.readFileSync(path.join(__dirname, 'help.txt'), 'utf-8'))
-  process.exit(1)
+var help = function(name) {
+  console.log(fs.readFileSync(path.join(__dirname, 'docs', name+'.txt'), 'utf-8'))
+  process.exit(0)
 }
 
 var onerror = function(err) {
@@ -74,21 +74,22 @@ tab('*')
   ('--help', '-h', '-?')
 
 tab('clean')
-  (function() {
+  (function(opts) {
+    if (opts.help) return help('clean')
     whale.clean(onerror)
   })
 
 tab('pull')
   (images)
   (function(image, opts) {
-    if (!image) return onerror('Usage: whale pull [image]')
+    if (!image || opts.help) return help('pull')
     whale.pull(image, opts).on('error', onerror).pipe(process.stdout)
   })
 
 tab('push')
   (images)
   (function(image, opts) {
-    if (!image) return onerror('Usage: whale push [image]')
+    if (!image || opts.help) return help('push')
     whale.push(image, opts).on('error', onerror).pipe(process.stdout)
   })
 
@@ -96,12 +97,13 @@ tab('build')
   ('--no-cache')
   (images)
   (function(image, opts) {
-    if (!image) return onerror('Usage: whale build [image]')
+    if (!image || opts.help) return help('build')
     tar.pack('.').pipe(whale.build(image, opts)).on('error', onerror).pipe(process.stdout)
   })
 
 tab('ps')
-  (function() {
+  (function(opts) {
+    if (opts.help) return help('ps')
     whale.ps(function(err, list) {
       if (err) return onerror(err)
 
@@ -121,14 +123,16 @@ tab('ps')
   })
 
 tab('events')
-  (function() {
+  (function(opts) {
+    if (opts.help) return help('events')
     whale.events().on('data', function(data) {
       console.log(dateable(data.time, 'YYYY-MM-DD hh:mm:ss')+' - '+(data.name || data.id)+' (from '+data.image+') '+': '+data.status)
     })
   })
 
 tab('images')
-  (function() {
+  (function(opts) {
+    if (opts.help) return help('images')
     whale.images(function(err, list) {
       if (err) return onerror(err)
 
@@ -150,7 +154,7 @@ tab('images')
 tab('remove')
   (images)
   (function(image) {
-    if (!image) return onerror('Usage: whale remove [image]')
+    if (!image || opts.help) return help('remove')
     whale.remove(image, onerror)
   })
 
@@ -158,14 +162,14 @@ tab('log')
   ('--all', '-a')
   (names)
   (function(name, opts) {
-    if (!name) return onerror('Usage: whale log [name]')
+    if (!name || opts.help) return help('log')
     attach(name, opts.all, false)
   })
 
 tab('inspect')
   (names)
   (function(name, opts) {
-    if (!name) return onerror('Usage: whale inspect [name]')
+    if (!name || opts.help) return help('inspect')
 
     whale.inspect(name, function(err, info) {
       if (err) return onerror(err)
@@ -186,7 +190,7 @@ tab('stop')
   ('--force')
   (names)
   (function(name) {
-    if (!name) return onerror('Usage: whale stop [name]')
+    if (!name || opts.help) return help('stop')
     whale.stop(name, onerror)
   })
 
@@ -201,7 +205,7 @@ tab('start')
   (images)
   (images)
   (function(image, name, opts) {
-    if (!image) return onerror('Usage: whale start [image] [name?]')
+    if (!image || opts.help) return help('start')
     if (!name) name = image
 
     var log = opts.log || !opts.detach
@@ -237,4 +241,4 @@ tab('start')
     })
   })
 
-tab.parse({'--':true}) || help()
+tab.parse({'--':true}) || help('usage')

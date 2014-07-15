@@ -1,0 +1,4 @@
+Usage: whale events
+
+Attach to the event stream. Will print out a message everytime something
+interesting happens with a container (start, stop etc)

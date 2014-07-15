@@ -1,0 +1,9 @@
+Usage: whale log [name] [options]
+
+Attach the stdout and stderr of a running container and forward the output
+to the terminal
+
+Available options are
+
+  -a, --all     Print the full log of the container since it started before
+                tailing the live output

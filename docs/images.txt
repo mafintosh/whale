@@ -1,0 +1,3 @@
+Usage: whale images
+
+Print a list of available local images

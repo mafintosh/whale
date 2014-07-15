@@ -1,0 +1,13 @@
+Usage: whale build [image] [options]
+
+Build a new docker image. Requires a Dockerfile in your current working directory.
+The build output will be forward to your terminal.
+
+Per default new images will have the version latest. To explicitly set a version use @
+
+  whale build my-image            # my-image will be tagged with latest
+  whale build my-image@0.10.0     # my-image will be tagged with 0.10.0
+
+Available options are
+
+  --no-cache    Build image without using the cache

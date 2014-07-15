@@ -1,0 +1,3 @@
+Usage: whale remove [image]
+
+Remove a local docker image

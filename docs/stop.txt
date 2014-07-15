@@ -1,0 +1,3 @@
+Usage: whale stop name
+
+Stop and remove a container.

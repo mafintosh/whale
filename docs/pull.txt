@@ -1,0 +1,7 @@
+Usage: whale pull [image]
+
+Pull a image from a registry. The pull progress will be forwarded to the terminal
+To pull a specific tag use the @ syntax
+
+  whale pull my-image           # pull latest my-image
+  whale pull my-image@0.10.0    # pull the 0.10.0 tag
