@@ -125,8 +125,10 @@ tab('ps')
 tab('events')
   (function(opts) {
     if (opts.help) return help('events')
-    whale.events().on('data', function(data) {
-      console.log(dateable(data.time, 'YYYY-MM-DD hh:mm:ss')+' - '+(data.name || data.id)+' (from '+data.image+') '+': '+data.status)
+    whale.events({name:true}).on('data', function(data) {
+      var name = data.name || data.id
+      if (name !== data.image) name += ' (from '+data.image+')'
+      console.log(dateable(data.time, 'YYYY-MM-DD hh:mm:ss')+' - '+name+' '+': '+data.status)
     })
   })
 

@@ -264,7 +264,7 @@ module.exports = function(remote, defaults) {
   that.events = function(opts) {
     if (!opts) opts = {}
 
-    var events = duplexify.obj()
+    var events = pumpify.obj()
     var names = {}
 
     var lookup = function(id, cb) {
