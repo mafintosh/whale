@@ -1,4 +1,4 @@
 Usage: whale clean
 
 Removes stopped containers and unnamed images.
-Whale will automatically remove a container when it has stopped. Use clean to force it.
+Whale will automatically remove a container when it has stopped.

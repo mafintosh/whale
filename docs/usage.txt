@@ -1,18 +1,18 @@
 Usage: whale [command] [options]
 
 Available commands are:
-  start        start a new container
-  stop         stop a container
-  restart      restart a container
-  events       print the event stream
-  inspect      print info about a single container
-  log          attach to container live logs
-  images       list available images
-  ps           list running containers
-  push         push an image to a registry
-  pull         pull an image from a registry
-  remove       remove a image
+
+  start        Start a new container
+  stop         Stop a container
+  events       Print the event stream
+  inspect      Print info about a single container
+  log          Attach to container live logs
+  images       List available images
+  ps           List running containers
+  push         Push an image to a registry
+  pull         Pull an image from a registry
+  remove       Remove an image
   clean        garbage collect containers/images
-  completion   setup tab completion
+  completion   Setup tab completion
 
 Run whale [command] --help for more information
