@@ -10,7 +10,7 @@ var xtend = require('xtend')
 var select = require('select-keys')
 
 var parseName = function(name) {
-  var parsed = name.match(/^(?:([^\/]+)\/)?([^@:]+)(?:[@:](.+))?$/).slice(1)
+  var parsed = name.match(/^(?:(.+)\/)?([^@:]+)(?:[@:](.+))?$/).slice(1)
   var result = {
     name: parsed[1],
     repository: parsed[0],
