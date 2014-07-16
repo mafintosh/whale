@@ -17,6 +17,7 @@
     "prettysize": "0.0.3",
     "pumpify": "^1.1.1",
     "relative-date": "^1.1.1",
+    "select-keys": "0.0.2",
     "single-line-stream": "^1.0.0",
     "tabalot": "^0.6.0",
     "tar-fs": "^0.3.3",

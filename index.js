@@ -7,6 +7,7 @@ var through = require('through2')
 var after = require('after-all')
 var log = require('single-line-stream')
 var xtend = require('xtend')
+var select = require('select-keys')
 
 var parseName = function(name) {
   var parsed = name.match(/^(?:([^\/]+)\/)?([^@:]+)(?:[@:](.+))?$/).slice(1)
@@ -32,9 +33,13 @@ var progressStream = function() {
 
   return through.obj(function(data, enc, cb) {
     if (data.error) return cb(new Error(data.error.trim()))
-    var i = data.id ? ids.lastIndexOf(data.id) : -1
+    var i = ids.lastIndexOf(data.id)
+    var msg = (data.id ? data.id + ' ' : '')+data.status+' '+(data.progress || '')
+
+    if (i > -1 && !data.id && messages[i] !== msg) i = -1
     if (i === -1) i = ids.push(data.id)-1
-    messages[i] = (data.id ? data.id + ' ' : '')+data.status+' '+(data.progress || '')
+
+    messages[i] = msg
     cb(null, messages.join('\n')+'\n')
   })
 }
@@ -64,11 +69,7 @@ module.exports = function(remote, defaults) {
   var that = {}
 
   var toAuth = function(opts) {
-    return {
-      email: opts.email || defaults.email,
-      username: opts.username || defaults.username,
-      password: opts.password || defaults.password
-    }
+    return select(xtend(defaults, opts), ['email', 'username', 'password'])
   }
 
   that.pull = function(image, opts) {
@@ -81,7 +82,7 @@ module.exports = function(remote, defaults) {
         repo: image.repository,
         fromImage: image.name,
         tag: image.tag,
-        registry: opts.registry
+        registry: opts.registry || defaults.registry
       },
       headers: {
         'X-Registry-Auth': toAuth(opts)
@@ -102,7 +103,7 @@ module.exports = function(remote, defaults) {
     var push = pumpify()
     var post = request.post('/images/'+(image.repository ? image.repository+'/' : '')+image.name+'/push', {
       qs: {
-        registry: opts.registry,
+        registry: opts.registry || defaults.registry,
         tag: image.tag
       },
       headers: {
