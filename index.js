@@ -47,7 +47,8 @@ var progressStream = function() {
 var noop = function() {}
 
 var encodeImage = function(img) {
-  return img.replace(/:/g, '@')
+  var i = img.indexOf('/')
+  return img.slice(0,i+1) + img.slice(i+1).replace(/:/g, '@')
 }
 
 var decodeImage = function(img) {
