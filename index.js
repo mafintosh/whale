@@ -16,7 +16,10 @@ var parseName = function(name) {
     repository: parsed[0],
     tag: parsed[2],
   }
-  result.url = (result.repository ? result.repository+'/' : '') + result.name + (result.tag ? ':' + result.tag : '')
+
+  result.family = (result.repository ? result.repository+'/' : '') + result.name
+  result.url = result.family + (result.tag ? ':' + result.tag : '')
+
   return result
 }
 
@@ -80,8 +83,7 @@ module.exports = function(remote, defaults) {
     var pull = pumpify()
     var post = request.post('/images/create', {
       qs: {
-        repo: image.repository,
-        fromImage: image.name,
+        fromImage: image.family,
         tag: image.tag,
         registry: opts.registry || defaults.registry
       },
@@ -102,7 +104,7 @@ module.exports = function(remote, defaults) {
     image = parseName(image)
 
     var push = pumpify()
-    var post = request.post('/images/'+(image.repository ? image.repository+'/' : '')+image.name+'/push', {
+    var post = request.post('/images/'+image.family+'/push', {
       qs: {
         registry: opts.registry || defaults.registry,
         tag: image.tag
