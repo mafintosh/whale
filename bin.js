@@ -155,7 +155,7 @@ tab('images')
 
 tab('remove')
   (images)
-  (function(image) {
+  (function(image, opts) {
     if (!image || opts.help) return help('remove')
     whale.remove(image, onerror)
   })
@@ -191,7 +191,7 @@ tab('inspect')
 tab('stop')
   ('--force')
   (names)
-  (function(name) {
+  (function(name, opts) {
     if (!name || opts.help) return help('stop')
     whale.stop(name, onerror)
   })
