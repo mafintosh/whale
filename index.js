@@ -10,6 +10,8 @@ var xtend = require('xtend')
 var select = require('select-keys')
 
 var parseName = function(name) {
+  if (typeof name === 'object') return name
+
   var parsed = name.match(/^(?:(.+)\/)?([^@:]+)(?:[@:](.+))?$/).slice(1)
   var result = {
     name: parsed[1],
@@ -148,6 +150,20 @@ module.exports = function(remote, defaults) {
     image = parseName(image)
 
     request.del('/images/'+image.url, {json: true}, function(err) {
+      cb(err)
+    })
+  }
+
+  that.tag = function(image, repo, cb) {
+    if (!cb) cb = noop
+    image = parseName(image)
+    repo = parseName(repo)
+
+    request.post('/images/'+image.url+'/tag', {
+      body: null,
+      buffer: true,
+      qs: {repo: repo.family, tag:repo.tag}
+    }, function(err) {
       cb(err)
     })
   }

@@ -1,0 +1,3 @@
+Usage: whale tag image alias
+
+Add a tag to an image. Useful if you want to rename it etc

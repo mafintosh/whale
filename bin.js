@@ -79,6 +79,14 @@ tab('clean')
     whale.clean(onerror)
   })
 
+tab('tag')
+  (images)
+  (images)
+  (function(image, repo, opts) {
+    if (!image || !repo || opts.help) return help('tag')
+    whale.tag(image, repo, onerror)
+  })
+
 tab('pull')
   (images)
   (function(image, opts) {
