@@ -83,7 +83,8 @@ module.exports = function(remote, defaults) {
     image = parseName(image, opts)
 
     var pull = pumpify()
-    var post = request.post('/images/create', {
+    request.post('/images/create', {
+      body: null,
       qs: {
         fromImage: image.family,
         tag: image.tag,
@@ -97,29 +98,38 @@ module.exports = function(remote, defaults) {
       pull.setPipeline(response, parse(), progressStream(), log())
     })
 
-    post.end()
     return pull
   }
 
-  that.push = function(image, opts) {
+  that.push = function(image, tag, opts) {
+    if (typeof tag === 'object' && tag) return that.push(image, null, tag)
     if (!opts) opts = {}
     image = parseName(image)
 
     var push = pumpify()
-    var post = request.post('/images/'+image.family+'/push', {
-      qs: {
-        registry: opts.registry || defaults.registry,
-        tag: image.tag
-      },
-      headers: {
-        'X-Registry-Auth': toAuth(opts)
-      }
-    }, function(err, response) {
-      if (err) return push.destroy(err)
-      push.setPipeline(response, parse(), progressStream(), log())
-    })
 
-    post.end()
+    var post = function(err) {
+      if (err) return push.destroy(err)
+      if (tag) image = parseName(tag)
+
+      request.post('/images/'+image.family+'/push', {
+        body: null,
+        qs: {
+          registry: opts.registry || defaults.registry,
+          tag: image.tag
+        },
+        headers: {
+          'X-Registry-Auth': toAuth(opts)
+        }
+      }, function(err, response) {
+        if (err) return push.destroy(err)
+        push.setPipeline(response, parse(), progressStream(), log())
+      })
+    }
+
+    if (tag) that.tag(image, tag, post)
+    else post()
+
     return push
   }
 

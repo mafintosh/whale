@@ -96,9 +96,10 @@ tab('pull')
 
 tab('push')
   (images)
-  (function(image, opts) {
+  (images)
+  (function(image, tag, opts) {
     if (!image || opts.help) return help('push')
-    whale.push(image, opts).on('error', onerror).pipe(process.stdout)
+    whale.push(image, tag, opts).on('error', onerror).pipe(process.stdout)
   })
 
 tab('build')
