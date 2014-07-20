@@ -19,7 +19,7 @@
     "relative-date": "^1.1.1",
     "select-keys": "0.0.2",
     "single-line-stream": "^1.0.0",
-    "tabalot": "^0.6.0",
+    "tabalot": "^0.6.1",
     "tar-fs": "^0.3.3",
     "text-table": "^0.2.0",
     "through-json": "^1.0.1",
