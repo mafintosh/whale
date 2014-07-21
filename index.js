@@ -164,8 +164,10 @@ module.exports = function(remote, defaults) {
     })
   }
 
-  that.tag = function(image, repo, cb) {
+  that.tag = function(image, repo, opts, cb) {
+    if (typeof opts === 'function') return that.tag(image, repo, null, opts)
     if (!cb) cb = noop
+    if (!opts) opts = {}
     image = parseName(image)
     repo = parseName(repo)
 
@@ -174,6 +176,7 @@ module.exports = function(remote, defaults) {
       buffer: true,
       qs: {repo: repo.family, tag:repo.tag}
     }, function(err) {
+      if (opts.rename) return that.remove(image, cb)
       cb(err)
     })
   }

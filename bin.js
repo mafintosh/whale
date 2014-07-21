@@ -81,11 +81,12 @@ tab('clean')
   })
 
 tab('tag')
+  ('--rename', '-r')
   (images)
   (images)
   (function(image, repo, opts) {
     if (!image || !repo || opts.help) return help('tag')
-    whale.tag(image, repo, onerror)
+    whale.tag(image, repo, opts, onerror)
   })
 
 tab('pull')
