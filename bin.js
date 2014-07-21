@@ -9,6 +9,7 @@ var dateable = require('dateable')
 var tar = require('tar-fs')
 var fs = require('fs')
 var path = require('path')
+var ignore = require('ignore-file')
 
 var CONF = path.join(process.env.HOME || process.env.USERPROFILE, '.dockercfg')
 var AUTH = fs.existsSync(CONF) && JSON.parse(fs.readFileSync(CONF))['https://index.docker.io/v1/']
@@ -104,10 +105,12 @@ tab('push')
 
 tab('build')
   ('--no-cache')
+  ('--no-ignore')
   (images)
   (function(image, opts) {
     if (!image || opts.help) return help('build')
-    tar.pack('.').pipe(whale.build(image, opts)).on('error', onerror).pipe(process.stdout)
+    var filter = opts.ignore !== false && (ignore.sync('.dockerignore') || ignore.sync('.gitignore'))
+    tar.pack('.', {ignore:filter}).pipe(whale.build(image, opts)).on('error', onerror).pipe(process.stdout)
   })
 
 tab('ps')
