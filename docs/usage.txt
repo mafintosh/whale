@@ -11,6 +11,7 @@ Available commands are:
   ps           List running containers
   push         Push an image to a registry
   pull         Pull an image from a registry
+  tag          Tag an existing image with another tag
   remove       Remove an image
   clean        garbage collect containers/images
   completion   Setup tab completion
