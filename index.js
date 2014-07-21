@@ -176,8 +176,8 @@ module.exports = function(remote, defaults) {
       buffer: true,
       qs: {repo: repo.family, tag:repo.tag}
     }, function(err) {
-      if (opts.rename) return that.remove(image, cb)
-      cb(err)
+      if (err || !opts.rename) return cb(err)
+      that.remove(image, cb)
     })
   }
 
