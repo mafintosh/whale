@@ -16,11 +16,11 @@ var parseName = function(name) {
   var result = {
     name: parsed[1],
     repository: parsed[0],
-    tag: parsed[2],
+    tag: parsed[2] || 'latest',
   }
 
   result.family = (result.repository ? result.repository+'/' : '') + result.name
-  result.url = result.family + (result.tag ? ':' + result.tag : '')
+  result.url = result.family + ':' + result.tag
 
   return result
 }
