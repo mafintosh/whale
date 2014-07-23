@@ -16,4 +16,5 @@ Available commands are:
   clean        garbage collect containers/images
   completion   Setup tab completion
 
+Use --host or -H to specify a remote docker instance
 Run whale [command] --help for more information
