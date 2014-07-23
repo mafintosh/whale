@@ -11,16 +11,21 @@ var fs = require('fs')
 var path = require('path')
 var ignore = require('ignore-file')
 
-var CONF = path.join(process.env.HOME || process.env.USERPROFILE, '.dockercfg')
-var AUTH = fs.existsSync(CONF) && JSON.parse(fs.readFileSync(CONF))['https://index.docker.io/v1/']
+var w
+var whale = function() {
+  if (w) return w
 
-if (AUTH) {
-  var parts = new Buffer(AUTH.auth, 'base64').toString().split(':')
-  AUTH.username = parts[0]
-  AUTH.password = parts[1]
+  var conf = path.join(process.env.HOME || process.env.USERPROFILE, '.dockercfg')
+  var auth = fs.existsSync(conf) && JSON.parse(fs.readFileSync(conf))['https://index.docker.io/v1/']
+
+  if (auth) {
+    var parts = new Buffer(auth.auth, 'base64').toString().split(':')
+    auth.username = parts[0]
+    auth.password = parts[1]
+  }
+
+  return w = require('./')(tab.argv.host, auth)
 }
-
-var whale = require('./')(AUTH)
 
 var help = function(name) {
   console.log(fs.readFileSync(path.join(__dirname, 'docs', name+'.txt'), 'utf-8'))
@@ -38,21 +43,21 @@ var toName = function(c) {
 }
 
 var names = function(cb) {
-  whale.ps(function(err, list) {
+  whale().ps(function(err, list) {
     if (err) return cb(err)
     cb(null, list.map(toName))
   })
 }
 
 var images = function(cb) {
-  whale.images(function(err, list) {
+  whale().images(function(err, list) {
     if (err) return cb(err)
     cb(null, list.map(toName))
   })
 }
 
-var attach = function(whale, name, all, kill) {
-  var log = whale.log(name, {all: all})
+var attach = function(name, all, kill) {
+  var log = whale().log(name, {all: all})
 
   log.on('error', onerror)
   log.stdout.pipe(process.stdout)
@@ -61,7 +66,7 @@ var attach = function(whale, name, all, kill) {
   if (!kill) return
 
   var stop = function() {
-    whale.stop(name, function() {
+    whale().stop(name, function() {
       process.exit(0)
     })
   }
@@ -78,7 +83,7 @@ tab('*')
 tab('clean')
   (function(opts) {
     if (opts.help) return help('clean')
-    whale.clean(onerror)
+    whale().clean(onerror)
   })
 
 tab('tag')
@@ -87,14 +92,14 @@ tab('tag')
   (images)
   (function(image, repo, opts) {
     if (!image || !repo || opts.help) return help('tag')
-    whale.tag(image, repo, opts, onerror)
+    whale().tag(image, repo, opts, onerror)
   })
 
 tab('pull')
   (images)
   (function(image, opts) {
     if (!image || opts.help) return help('pull')
-    whale.pull(image, opts).on('error', onerror).pipe(process.stdout)
+    whale().pull(image, opts).on('error', onerror).pipe(process.stdout)
   })
 
 tab('push')
@@ -102,7 +107,7 @@ tab('push')
   (images)
   (function(image, tag, opts) {
     if (!image || opts.help) return help('push')
-    whale.push(image, tag, opts).on('error', onerror).pipe(process.stdout)
+    whale().push(image, tag, opts).on('error', onerror).pipe(process.stdout)
   })
 
 tab('build')
@@ -112,13 +117,13 @@ tab('build')
   (function(image, opts) {
     if (!image || opts.help) return help('build')
     var filter = opts.ignore !== false && (ignore.sync('.dockerignore') || ignore.sync('.gitignore'))
-    tar.pack('.', {ignore:filter}).pipe(whale.build(image, opts)).on('error', onerror).pipe(process.stdout)
+    tar.pack('.', {ignore:filter}).pipe(whale().build(image, opts)).on('error', onerror).pipe(process.stdout)
   })
 
 tab('ps')
   (function(opts) {
     if (opts.help) return help('ps')
-    whale.ps(function(err, list) {
+    whale().ps(function(err, list) {
       if (err) return onerror(err)
 
       list = list.map(function(c) {
@@ -139,7 +144,7 @@ tab('ps')
 tab('events')
   (function(opts) {
     if (opts.help) return help('events')
-    whale.events({name:true}).on('data', function(data) {
+    whale().events({name:true}).on('data', function(data) {
       var name = data.name || data.id
       if (name !== data.image) name += ' (from '+data.image+')'
       console.log(dateable(data.time, 'YYYY-MM-DD hh:mm:ss')+' - '+name+' '+': '+data.status)
@@ -149,7 +154,7 @@ tab('events')
 tab('images')
   (function(opts) {
     if (opts.help) return help('images')
-    whale.images(function(err, list) {
+    whale().images(function(err, list) {
       if (err) return onerror(err)
 
       list = list.map(function(i) {
@@ -171,7 +176,7 @@ tab('remove')
   (images)
   (function(image, opts) {
     if (!image || opts.help) return help('remove')
-    whale.remove(image, onerror)
+    whale().remove(image, onerror)
   })
 
 tab('log')
@@ -179,7 +184,7 @@ tab('log')
   (names)
   (function(name, opts) {
     if (!name || opts.help) return help('log')
-    attach(whale, name, opts.all, false)
+    attach(name, opts.all, false)
   })
 
 tab('inspect')
@@ -187,7 +192,7 @@ tab('inspect')
   (function(name, opts) {
     if (!name || opts.help) return help('inspect')
 
-    whale.inspect(name, function(err, info) {
+    whale().inspect(name, function(err, info) {
       if (err) return onerror(err)
 
       var name = info.name
@@ -207,7 +212,7 @@ tab('stop')
   (names)
   (function(name, opts) {
     if (!name || opts.help) return help('stop')
-    whale.stop(name, onerror)
+    whale().stop(name, onerror)
   })
 
 tab('start')
@@ -251,9 +256,9 @@ tab('start')
     opts.volumes = volumes
     opts.ports = ports
 
-    whale.start(name, opts, function(err) {
+    whale().start(name, opts, function(err) {
       if (err) return onerror(err)
-      if (!opts.fork) attach(whale, name, true, true)
+      if (!opts.fork) attach(name, true, true)
     })
   })
 
