@@ -51,7 +51,7 @@ var images = function(cb) {
   })
 }
 
-var attach = function(name, all, kill) {
+var attach = function(whale, name, all, kill) {
   var log = whale.log(name, {all: all})
 
   log.on('error', onerror)
@@ -72,6 +72,7 @@ var attach = function(name, all, kill) {
 }
 
 tab('*')
+  ('--host', '-H', '@host')
   ('--help', '-h', '-?')
 
 tab('clean')
@@ -178,7 +179,7 @@ tab('log')
   (names)
   (function(name, opts) {
     if (!name || opts.help) return help('log')
-    attach(name, opts.all, false)
+    attach(whale, name, opts.all, false)
   })
 
 tab('inspect')
@@ -252,7 +253,7 @@ tab('start')
 
     whale.start(name, opts, function(err) {
       if (err) return onerror(err)
-      if (!opts.fork) attach(name, true, true)
+      if (!opts.fork) attach(whale, name, true, true)
     })
   })
 
