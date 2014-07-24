@@ -1,0 +1,3 @@
+Usage: whale info
+
+Prints whale and docker debug information (versions etc)

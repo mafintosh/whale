@@ -81,7 +81,8 @@ tab('*')
   ('--help', '-h', '-?')
 
 tab('info')
-  (function() {
+  (function(opts) {
+    if (opts.help) return help('info')
     whale().info(function(err, info) {
       if (err) return onerror(err)
       var remote = info.remote
