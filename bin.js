@@ -80,6 +80,19 @@ tab('*')
   ('--host', '-H', '@host')
   ('--help', '-h', '-?')
 
+tab('info')
+  (function() {
+    whale().info(function(err, info) {
+      if (err) return onerror(err)
+      var remote = info.remote
+      delete info.remote
+      console.log(tree.plain({
+        label: remote,
+        leaf: info
+      }))
+    })
+  })
+
 tab('clean')
   (function(opts) {
     if (opts.help) return help('clean')

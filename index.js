@@ -78,6 +78,38 @@ module.exports = function(remote, defaults) {
     return select(xtend(defaults, opts), ['email', 'username', 'password'])
   }
 
+  that.remote = request.remote
+
+  that.info = function(cb) {
+    var result = {}
+    result.versions = {}
+    result.drivers = {}
+
+    request.get('/version', {json: true}, function(err, version) {
+      if (err) return cb(err)
+
+      result.versions.api = version.ApiVersion
+      result.versions.docker = version.Version
+      result.versions.kernel = version.KernelVersion
+      result.versions.whale = require('./package.json').version
+      result.versions.node = process.version.slice(1)
+      result.remote = that.remote
+      result.arch = version.Arch
+      result.os = version.Os
+
+      request.get('/info', {json: true}, function(err, info) {
+        if (err) return cb(err)
+
+        result.drivers.storage = info.Driver
+        result.drivers.execution = info.ExecutionDriver
+        result.containers = info.Containers
+        result.images = info.Images
+
+        cb(null, result)
+      })
+    })
+  }
+
   that.pull = function(image, opts) {
     if (!opts) opts = {}
     image = parseName(image, opts)
