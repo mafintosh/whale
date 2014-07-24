@@ -342,7 +342,7 @@ module.exports = function(remote, defaults) {
         stdout: 1,
         stderr: 1,
         stream: 1,
-        log: +!!opts.all
+        logs: +!!opts.all
       }
     }, function(err, response) {
       if (err) return log.destroy(err)
