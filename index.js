@@ -16,11 +16,11 @@ var parseName = function(name) {
   var result = {
     name: parsed[1],
     repository: parsed[0],
-    tag: parsed[2] || 'latest',
+    tag: parsed[2],
   }
 
   result.family = (result.repository ? result.repository+'/' : '') + result.name
-  result.url = result.family + ':' + result.tag
+  result.url = result.family + (result.tag ? ':' + result.tag : '')
 
   return result
 }
@@ -87,7 +87,7 @@ module.exports = function(remote, defaults) {
       body: null,
       qs: {
         fromImage: image.family,
-        tag: image.tag,
+        tag: image.tag || 'latest',
         registry: opts.registry || defaults.registry
       },
       headers: {
@@ -116,7 +116,7 @@ module.exports = function(remote, defaults) {
         body: null,
         qs: {
           registry: opts.registry || defaults.registry,
-          tag: image.tag
+          tag: image.tag || 'latest'
         },
         headers: {
           'X-Registry-Auth': toAuth(opts)
