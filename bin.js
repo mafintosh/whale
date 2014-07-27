@@ -39,6 +39,8 @@ var onerror = function(err) {
 }
 
 var join = function(a, b) {
+  if (!a) return b
+  if (!b) return a
   return function(filename) {
     return a(filename) || b(filename)
   }
