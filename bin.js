@@ -38,6 +38,12 @@ var onerror = function(err) {
   process.exit(1)
 }
 
+var join = function(a, b) {
+  return function(filename) {
+    return a(filename) || b(filename)
+  }
+}
+
 var toName = function(c) {
   return c.name
 }
@@ -130,7 +136,7 @@ tab('build')
   (images)
   (function(image, opts) {
     if (!image || opts.help) return help('build')
-    var filter = opts.ignore !== false && (ignore.sync('.dockerignore') || ignore.sync('.gitignore'))
+    var filter = opts.ignore !== false && (ignore.sync('.dockerignore') || join(ignore.compile('.git'), ignore.sync('.gitignore')))
     tar.pack('.', {ignore:filter}).pipe(whale().build(image, opts)).on('error', onerror).pipe(process.stdout)
   })
 
