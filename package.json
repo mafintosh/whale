@@ -13,7 +13,7 @@
     "docker-raw-stream": "^1.2.0",
     "docker-remote-api": "^2.2.0",
     "duplexify": "^3.0.0",
-    "ignore-file": "^1.1.1",
+    "ignore-file": "^1.1.2",
     "pretty-tree": "^0.2.0",
     "prettysize": "0.0.3",
     "pumpify": "^1.2.0",
