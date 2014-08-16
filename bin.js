@@ -143,6 +143,7 @@ tab('build')
   })
 
 tab('ps')
+  ('--long', '-l')
   (function(opts) {
     if (opts.help) return help('ps')
     whale().ps(function(err, list) {
@@ -151,7 +152,7 @@ tab('ps')
       list = list.map(function(c) {
         return [
           c.name,
-          c.id.slice(0, 12),
+          opts.long ? c.id : c.id.slice(0, 12),
           c.image,
           c.command,
           relative(c.created)
@@ -174,16 +175,21 @@ tab('events')
   })
 
 tab('images')
+  ('--long', '-l')
   (function(opts) {
     if (opts.help) return help('images')
     whale().images(function(err, list) {
       if (err) return onerror(err)
 
+      var shorten = function(id) {
+        return opts.long ? id : id.slice(0, 12)
+      }
+
       list = list.map(function(i) {
         return [
           i.name,
-          i.id.slice(0, 12),
-          i.parent.slice(0, 12),
+          shorten(i.id),
+          shorten(i.parent),
           relative(i.created),
           pretty(i.virtualSize)
         ]
@@ -210,6 +216,7 @@ tab('log')
   })
 
 tab('inspect')
+  ('--long', '-l')
   (names)
   (function(name, opts) {
     if (!name || opts.help) return help('inspect')
@@ -220,7 +227,7 @@ tab('inspect')
       var name = info.name
       delete info.name
       info.created = relative(info.created)
-      info.id = info.id.slice(0, 12)
+      info.id = opts.long ? info.id : info.id.slice(0, 12)
 
       console.log(tree.plain({
         label: name,
